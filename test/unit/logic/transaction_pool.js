@@ -77,6 +77,14 @@ describe('transactionPool', () => {
 		verify: sinonSandbox.stub().callsArgWith(4, null),
 	};
 
+	const storageStub = {
+		entities: {
+			Account: {
+				getOne: sinonSandbox.stub(),
+			},
+		},
+	};
+
 	const busSpy = {
 		message: sinonSandbox.spy(),
 	};
@@ -146,7 +154,8 @@ describe('transactionPool', () => {
 			busSpy, // bus
 			logger, // logger
 			balancesSequence,
-			config
+			config,
+			storageStub
 		);
 
 		// Bind fake modules
@@ -1802,7 +1811,13 @@ describe('transactionPool', () => {
 				sender.multisignatures = [{ id: '23423' }];
 				sender.signatures = [{ id: '11999' }];
 				accountsStub.setAccountAndGet.callsArgWith(1, null, sender);
-				accountsStub.getAccount.callsArgWith(1, 'Requester not found', null);
+				storageStub.entities.Account.getOne
+					.withArgs(
+						{ publicKey: transaction.requesterPublicKey },
+						{},
+						sinonSandbox.match.any
+					)
+					.rejects();
 				_processVerifyTransaction(transaction, true, err => {
 					expect(err).to.deep.equal('Requester not found');
 					done();
@@ -1814,7 +1829,13 @@ describe('transactionPool', () => {
 				sender.multisignatures = [{ id: '23423' }];
 				sender.signatures = [{ id: '11999' }];
 				accountsStub.setAccountAndGet.callsArgWith(1, null, sender);
-				accountsStub.getAccount.callsArgWith(1, null, sender);
+				storageStub.entities.Account.getOne
+					.withArgs(
+						{ publicKey: transaction.requesterPublicKey },
+						{},
+						sinonSandbox.match.any
+					)
+					.resolves(sender);
 				_processVerifyTransaction(transaction, true, err => {
 					expect(err).to.eql(null);
 					done();

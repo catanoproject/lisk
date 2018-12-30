@@ -55,13 +55,15 @@ class TransactionPool {
 		bus,
 		logger,
 		balancesSequence,
-		config
+		config,
+		storage
 	) {
 		const { maxTransactionsPerQueue } = config.transactions;
 
 		library = {
 			logger,
 			bus,
+			storage,
 			logic: {
 				transaction,
 			},
@@ -862,16 +864,13 @@ __private.processVerifyTransaction = function(transaction, broadcast, cb, tx) {
 				}
 
 				if (sender && transaction.requesterPublicKey && multisignatures) {
-					return modules.accounts.getAccount(
+					return library.storage.entities.Account.getOne(
 						{ publicKey: transaction.requesterPublicKey },
-						(err, requester) => {
-							if (!requester) {
-								return setImmediate(waterCb, 'Requester not found');
-							}
-							return setImmediate(waterCb, null, sender, requester);
-						},
+						{},
 						tx
-					);
+					)
+						.then(requester => setImmediate(waterCb, null, sender, requester))
+						.catch(() => setImmediate(waterCb, 'Requester not found'));
 				}
 				return setImmediate(waterCb, null, sender, null);
 			},
