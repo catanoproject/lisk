@@ -93,7 +93,7 @@ class Delegates {
 			transactionTypes.DELEGATE
 		] = library.logic.transaction.attachAssetType(
 			transactionTypes.DELEGATE,
-			new Delegate(scope.logger, scope.schema)
+			new Delegate(scope.logger, scope.schema, scope.storage)
 		);
 
 		setImmediate(cb, null, self);

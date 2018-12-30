@@ -91,6 +91,7 @@ const rawValidTransaction = {
 
 describe('delegate', () => {
 	let accountsMock;
+	let storageMock;
 	let delegate;
 	let loggerMock;
 
@@ -112,11 +113,23 @@ describe('delegate', () => {
 			setAccountAndGet: sinonSandbox.stub().callsArg(1),
 		};
 
+		storageMock = {
+			entities: {
+				Account: {
+					isPersisted: sinonSandbox.stub().resolves(true),
+				},
+			},
+		};
+
 		loggerMock = {
 			debug: sinonSandbox.spy(),
 		};
 
-		delegate = new Delegate(loggerMock, modulesLoader.scope.schema);
+		delegate = new Delegate(
+			loggerMock,
+			modulesLoader.scope.schema,
+			storageMock
+		);
 		return delegate.bind(accountsMock);
 	});
 
@@ -315,37 +328,48 @@ describe('delegate', () => {
 			describe('when username already exists as unconfirmed', () => {
 				beforeEach(() => {
 					checkConfirmedStub.restore();
-					accountsMock.getAccount
+
+					storageMock.entities.Account.isPersisted
 						.withArgs(
-							{ username: accounts.existingDelegate.delegateName },
-							['username'],
+							{
+								username: accounts.existingDelegate.delegateName,
+							},
+							{},
 							sinonSandbox.match.any
 						)
-						.yields(null, null);
-					accountsMock.getAccount
+						.resolves(false);
+
+					storageMock.entities.Account.isPersisted
 						.withArgs(
-							{ u_username: accounts.existingDelegate.delegateName },
-							['u_username'],
+							{
+								u_username: accounts.existingDelegate.delegateName,
+							},
+							{},
 							sinonSandbox.match.any
 						)
-						.yields(null, accounts.existingDelegate);
-					accountsMock.getAccount
+						.resolves(true);
+
+					storageMock.entities.Account.isPersisted
 						.withArgs(
 							{
 								publicKey: accounts.existingDelegate.publicKey,
-								u_isDelegate: 1,
+								u_isDelegate: true,
 							},
-							['u_username'],
+							{},
 							sinonSandbox.match.any
 						)
-						.yields(null, null);
-					return accountsMock.getAccount
+						.resolves(false);
+
+					return storageMock.entities.Account.isPersisted
 						.withArgs(
-							{ publicKey: accounts.existingDelegate.publicKey, isDelegate: 1 },
-							['username'],
+							{
+								publicKey: accounts.existingDelegate.publicKey,
+								isDelegate: true,
+							},
+							{},
 							sinonSandbox.match.any
 						)
-						.yields(null, null);
+						.resolves(false);
 				});
 
 				it('should not return an error', done => {
@@ -359,37 +383,47 @@ describe('delegate', () => {
 			describe('when username already exists as confirmed', () => {
 				beforeEach(() => {
 					checkConfirmedStub.restore();
-					accountsMock.getAccount
+					storageMock.entities.Account.isPersisted
 						.withArgs(
-							{ username: accounts.existingDelegate.delegateName },
-							['username'],
+							{
+								username: accounts.existingDelegate.delegateName,
+							},
+							{},
 							sinonSandbox.match.any
 						)
-						.yields(null, accounts.existingDelegate);
-					accountsMock.getAccount
+						.resolves(true);
+
+					storageMock.entities.Account.isPersisted
 						.withArgs(
-							{ u_username: accounts.existingDelegate.delegateName },
-							['u_username'],
+							{
+								u_username: accounts.existingDelegate.delegateName,
+							},
+							{},
 							sinonSandbox.match.any
 						)
-						.yields(null, null);
-					accountsMock.getAccount
+						.resolves(false);
+
+					storageMock.entities.Account.isPersisted
 						.withArgs(
 							{
 								publicKey: accounts.existingDelegate.publicKey,
-								u_isDelegate: 1,
+								u_isDelegate: true,
 							},
-							['u_username'],
+							{},
 							sinonSandbox.match.any
 						)
-						.yields(null, null);
-					return accountsMock.getAccount
+						.resolves(false);
+
+					return storageMock.entities.Account.isPersisted
 						.withArgs(
-							{ publicKey: accounts.existingDelegate.publicKey, isDelegate: 1 },
-							['username'],
+							{
+								publicKey: accounts.existingDelegate.publicKey,
+								isDelegate: true,
+							},
+							{},
 							sinonSandbox.match.any
 						)
-						.yields(null, null);
+						.resolves(false);
 				});
 
 				it('should return an error for valid params', done => {
@@ -407,37 +441,48 @@ describe('delegate', () => {
 			describe('when publicKey already exists as unconfirmed delegate', () => {
 				beforeEach(() => {
 					checkConfirmedStub.restore();
-					accountsMock.getAccount
+
+					storageMock.entities.Account.isPersisted
 						.withArgs(
-							{ username: accounts.existingDelegate.delegateName },
-							['username'],
+							{
+								username: accounts.existingDelegate.delegateName,
+							},
+							{},
 							sinonSandbox.match.any
 						)
-						.yields(null, null);
-					accountsMock.getAccount
+						.resolves(false);
+
+					storageMock.entities.Account.isPersisted
 						.withArgs(
-							{ u_username: accounts.existingDelegate.delegateName },
-							['u_username'],
+							{
+								u_username: accounts.existingDelegate.delegateName,
+							},
+							{},
 							sinonSandbox.match.any
 						)
-						.yields(null, null);
-					accountsMock.getAccount
+						.resolves(false);
+
+					storageMock.entities.Account.isPersisted
 						.withArgs(
 							{
 								publicKey: accounts.existingDelegate.publicKey,
-								u_isDelegate: 1,
+								u_isDelegate: true,
 							},
-							['u_username'],
+							{},
 							sinonSandbox.match.any
 						)
-						.yields(null, accounts.existingDelegate);
-					return accountsMock.getAccount
+						.resolves(true);
+
+					return storageMock.entities.Account.isPersisted
 						.withArgs(
-							{ publicKey: accounts.existingDelegate.publicKey, isDelegate: 1 },
-							['username'],
+							{
+								publicKey: accounts.existingDelegate.publicKey,
+								isDelegate: true,
+							},
+							{},
 							sinonSandbox.match.any
 						)
-						.yields(null, null);
+						.resolves(false);
 				});
 
 				it('should return not return an error', done => {
@@ -524,7 +569,28 @@ describe('delegate', () => {
 		beforeEach(done => {
 			validUsernameField = 'u_username';
 			validIsDelegateField = 'u_isDelegate';
-			accountsMock.getAccount.callsArg(2);
+
+			storageMock.entities.Account.isPersisted
+				.withArgs(
+					{
+						publicKey: accounts.existingDelegate.publicKey,
+						u_isDelegate: true,
+					},
+					{},
+					sinonSandbox.match.any
+				)
+				.resolves(false);
+
+			storageMock.entities.Account.isPersisted
+				.withArgs(
+					{
+						u_username: accounts.existingDelegate.delegateName,
+					},
+					{},
+					sinonSandbox.match.any
+				)
+				.resolves(false);
+
 			delegate.checkDuplicates(
 				validTransaction,
 				validUsernameField,
@@ -537,22 +603,22 @@ describe('delegate', () => {
 			);
 		});
 
-		it('should call modules.accounts.getAccount twice', () => {
-			return expect(accountsMock.getAccount.calledTwice).to.be.true;
+		it('should call storage.entities.Account.isPersisted twice', () => {
+			return expect(storageMock.entities.Account.isPersisted).to.be.calledTwice;
 		});
 
-		it('should call modules.accounts.getAccount with checking delegate registration params', () => {
+		it('should call storage.entities.Account.isPersisted with checking delegate registration params', () => {
 			return expect(
-				accountsMock.getAccount.calledWith({
+				storageMock.entities.Account.isPersisted.calledWith({
 					publicKey: accounts.existingDelegate.publicKey,
-					u_isDelegate: 1,
+					u_isDelegate: true,
 				})
 			).to.be.true;
 		});
 
-		it('should call modules.accounts.getAccount with checking username params', () => {
+		it('should call storage.entities.Account.isPersisted with checking username params', () => {
 			return expect(
-				accountsMock.getAccount.calledWith({
+				storageMock.entities.Account.isPersisted.calledWith({
 					u_username: accounts.existingDelegate.delegateName,
 				})
 			).to.be.true;
@@ -560,13 +626,25 @@ describe('delegate', () => {
 
 		describe('when username exists', () => {
 			beforeEach(done => {
-				accountsMock.getAccount
+				storageMock.entities.Account.isPersisted
 					.withArgs(
-						{ u_username: accounts.existingDelegate.delegateName },
-						['u_username'],
+						{
+							u_isDelegate: true,
+							publicKey: accounts.existingDelegate.publicKey,
+						},
+						{},
 						sinonSandbox.match.any
 					)
-					.yields(null, accounts.existingDelegate);
+					.resolves(false);
+
+				storageMock.entities.Account.isPersisted
+					.withArgs(
+						{ u_username: accounts.existingDelegate.delegateName },
+						{},
+						sinonSandbox.match.any
+					)
+					.resolves(true);
+
 				delegate.checkDuplicates(
 					validTransaction,
 					validUsernameField,
@@ -588,13 +666,17 @@ describe('delegate', () => {
 
 		describe('when publicKey already exists as a delegate', () => {
 			beforeEach(done => {
-				accountsMock.getAccount
+				storageMock.entities.Account.isPersisted
 					.withArgs(
-						{ publicKey: accounts.existingDelegate.publicKey, u_isDelegate: 1 },
-						['u_username'],
+						{
+							publicKey: accounts.existingDelegate.publicKey,
+							u_isDelegate: true,
+						},
+						{},
 						sinonSandbox.match.any
 					)
-					.yields(null, accounts.existingDelegate);
+					.resolves(true);
+
 				delegate.checkDuplicates(
 					validTransaction,
 					validUsernameField,

@@ -31,14 +31,16 @@ let self;
  * @requires async
  * @param {logger} logger
  * @param {ZSchema} schema
+ * @param {Object} storage
  * @todo Add description for the params
  */
 class Delegate {
-	constructor(logger, schema) {
+	constructor(logger, schema, storage) {
 		self = this;
 		library = {
 			schema,
 			logger,
+			storage,
 		};
 	}
 }
@@ -191,15 +193,23 @@ Delegate.prototype.checkDuplicates = function(
 	async.parallel(
 		{
 			duplicatedDelegate(eachCb) {
-				const query = {};
-				query[isDelegate] = 1;
-				query.publicKey = transaction.senderPublicKey;
-				return modules.accounts.getAccount(query, [username], eachCb, tx);
+				library.storage.entities.Account.isPersisted(
+					{
+						[isDelegate]: true,
+						publicKey: transaction.senderPublicKey,
+					},
+					{},
+					tx
+				).then(status => setImmediate(eachCb, null, status));
 			},
 			duplicatedUsername(eachCb) {
-				const query = {};
-				query[username] = transaction.asset.delegate.username;
-				return modules.accounts.getAccount(query, [username], eachCb, tx);
+				library.storage.entities.Account.isPersisted(
+					{
+						[username]: transaction.asset.delegate.username,
+					},
+					{},
+					tx
+				).then(status => setImmediate(eachCb, null, status));
 			},
 		},
 		(err, res) => {
