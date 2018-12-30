@@ -45,6 +45,7 @@ class Voters {
 	constructor(cb, scope) {
 		library = {
 			db: scope.db,
+			storage: scope.storage,
 			logger: scope.logger,
 			schema: scope.schema,
 		};
@@ -199,11 +200,24 @@ const getVotesForDelegates = function(filters, delegate, cb) {
  * @todo Add description of the function
  */
 const populateVotes = function(sort, addresses, cb) {
-	modules.accounts.getAccounts(
-		{ address: addresses, sort },
-		['address', 'balance', 'publicKey', 'username'],
-		cb
-	);
+	if (addresses.length === 0) {
+		return setImmediate(cb, null, []);
+	}
+
+	return library.storage.entities.Account.get(
+		{ address_in: addresses },
+		{ sort }
+	)
+		.then(accounts => {
+			accounts = accounts.map(({ address, balance, publicKey, username }) => ({
+				address,
+				balance,
+				publicKey,
+				username,
+			}));
+			return setImmediate(cb, null, accounts);
+		})
+		.catch(error => setImmediate(cb, error));
 };
 
 /**

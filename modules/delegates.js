@@ -69,6 +69,7 @@ class Delegates {
 			sequence: scope.sequence,
 			ed: scope.ed,
 			db: scope.db,
+			storage: scope.storage,
 			network: scope.network,
 			schema: scope.schema,
 			balancesSequence: scope.balancesSequence,
@@ -141,21 +142,20 @@ Delegates.prototype.clearDelegateListCache = function() {
  * @todo Add description for the return value
  */
 __private.getKeysSortByVote = function(cb, tx) {
-	modules.accounts.getAccounts(
+	library.storage.entities.Account.get(
 		{
-			isDelegate: 1,
-			sort: { vote: -1, publicKey: 1 },
+			isDelegate: true,
+		},
+		{
+			sort: ['vote:desc', 'publicKey:asc'],
 			limit: ACTIVE_DELEGATES,
 		},
-		['publicKey'],
-		(err, rows) => {
-			if (err) {
-				return setImmediate(cb, err);
-			}
-			return setImmediate(cb, null, rows.map(el => el.publicKey));
-		},
 		tx
-	);
+	)
+		.then(accounts =>
+			setImmediate(cb, null, accounts.map(account => account.publicKey))
+		)
+		.catch(accountError => setImmediate(cb, accountError));
 };
 
 /**
@@ -445,17 +445,15 @@ __private.checkDelegates = function(senderPublicKey, votes, state, cb, tx) {
 			},
 			// Validate votes in the transaction by checking that sender is not voting for an account already, and also that sender is not unvoting an account it did not vote before.
 			function validateVotes(existingVotedPublicKeys, waterfallCb) {
-				modules.accounts.getAccounts(
+				library.storage.entities.Account.get(
 					{
-						publicKey: votesWithAction.map(({ publicKey }) => publicKey),
-						isDelegate: 1,
-						sort: 'address:desc',
+						publicKey_in: votesWithAction.map(({ publicKey }) => publicKey),
+						isDelegate: true,
 					},
-					(err, votesAccounts) => {
-						if (err) {
-							return setImmediate(waterfallCb, err);
-						}
-
+					{ sort: 'address:desc' },
+					tx
+				)
+					.then(votesAccounts => {
 						if (
 							!votesAccounts ||
 							votesAccounts.length < votesWithAction.length
@@ -533,9 +531,8 @@ __private.checkDelegates = function(senderPublicKey, votes, state, cb, tx) {
 							);
 						}
 						return setImmediate(waterfallCb);
-					},
-					tx
-				);
+					})
+					.catch(error => setImmediate(waterfallCb, error));
 			},
 		],
 		cb
@@ -813,28 +810,68 @@ Delegates.prototype.getDelegates = function(query, cb) {
 	if (!_.isObject(query)) {
 		throw 'Invalid query argument, expected object';
 	}
+	const filters = {
+		isDelegate: true,
+	};
+	const options = {
+		limit: query.limit,
+		offset: query.offset,
+		sort: query.sort,
+		extended: true,
+	};
+
 	if (query.search) {
-		query.username = { $like: `%${query.search}%` };
-		delete query.search;
+		filters.username_like = `%${query.search}%`;
 	}
-	query.isDelegate = 1;
-	modules.accounts.getAccounts(
-		query,
-		[
-			'username',
-			'address',
-			'publicKey',
-			'vote',
-			'rewards',
-			'producedBlocks',
-			'missedBlocks',
-			'secondPublicKey',
-			'rank',
-			'approval',
-			'productivity',
-		],
-		(err, delegates) => setImmediate(cb, err, delegates)
-	);
+
+	['address', 'publicKey', 'secondPublicKey', 'username'].forEach(field => {
+		if (query[field] !== undefined) {
+			if (Array.isArray(query[field])) {
+				filters[`${field}_in`] = query[field];
+			} else {
+				filters[field] = query[field];
+			}
+		}
+	});
+
+	if (query.publicKey !== undefined) {
+		if (Array.isArray(query.publicKey)) {
+			filters.publicKey_in = query.publicKey;
+		} else {
+			filters.publicKey = query.publicKey;
+		}
+	}
+
+	if (query.secondPublicKey !== undefined) {
+		if (Array.isArray(query.secondPublicKey)) {
+			filters.secondPublicKey_in = query.secondPublicKey;
+		} else {
+			filters.secondPublicKey = query.secondPublicKey;
+		}
+	}
+
+	library.storage.entities.Account.get(filters, options)
+		.then(delegates => {
+			delegates = delegates.map(delegate =>
+				_.pick(delegate, [
+					'username',
+					'address',
+					'publicKey',
+					'vote',
+					'rewards',
+					'producedBlocks',
+					'missedBlocks',
+					'secondPublicKey',
+					'rank',
+					'approval',
+					'productivity',
+				])
+			);
+
+			// TODO: Need to inject dynamic field 'Approval'
+			return setImmediate(cb, null, delegates);
+		})
+		.catch(error => setImmediate(cb, error));
 };
 
 /**

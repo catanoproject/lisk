@@ -48,6 +48,7 @@ function Multisignatures(cb, scope) {
 	library = {
 		logger: scope.logger,
 		db: scope.db,
+		storage: scope.storage,
 		network: scope.network,
 		schema: scope.schema,
 		bus: scope.bus,
@@ -371,10 +372,10 @@ Multisignatures.prototype.getGroup = function(address, cb) {
 							addresses.push(modules.accounts.generateAddressByPublicKey(key));
 						});
 
-						modules.accounts.getAccounts(
-							{ address: addresses },
-							['address', 'publicKey', 'secondPublicKey'],
-							(err, accounts) => {
+						library.storage.entities.Account.get({
+							address_in: addresses,
+						})
+							.then(accounts => {
 								accounts.forEach(account => {
 									scope.group.members.push({
 										address: account.address,
@@ -384,8 +385,8 @@ Multisignatures.prototype.getGroup = function(address, cb) {
 								});
 
 								return setImmediate(seriesCb);
-							}
-						);
+							})
+							.catch(error => setImmediate(seriesCb, error));
 					});
 			},
 		},
