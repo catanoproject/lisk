@@ -84,12 +84,21 @@ describe('multisignatures', () => {
 		);
 		stubs.Multisignature.resetHistory();
 
+		stubs.storage = {
+			entities: {
+				Account: {
+					get: sinonSandbox.stub(),
+				},
+			},
+		};
+
 		// Create stubbed scope
 		validScope = {
 			logger: stubs.logger,
 			db: {
 				multisignatures: {},
 			},
+			storage: stubs.storage,
 			network: { io: { sockets: { emit: stubs.networkIoSocketsEmit } } },
 			schema: stubs.schema,
 			bus: { message: stubs.busMessage },
@@ -941,9 +950,7 @@ describe('multisignatures', () => {
 				.stub()
 				.callsFake(() => Promise.resolve([]));
 
-			stubs.modules.accounts.getAccounts = sinonSandbox
-				.stub()
-				.callsFake((param1, param2, cb) => cb(null, []));
+			stubs.storage.entities.Account.get = sinonSandbox.stub().resolves([]);
 
 			stubs.modules.accounts.generateAddressByPublicKey = sinonSandbox.stub();
 
@@ -958,7 +965,6 @@ describe('multisignatures', () => {
 				stubs.logic.account.getMultiSignature;
 			library.db.multisignatures.getMemberPublicKeys =
 				stubs.getMemberPublicKeys;
-			get('modules').accounts.getAccounts = stubs.modules.accounts.getAccounts;
 			get('modules').accounts.generateAddressByPublicKey =
 				stubs.modules.accounts.generateAddressByPublicKey;
 			done();
@@ -1040,14 +1046,14 @@ describe('multisignatures', () => {
 				secondPublicKey: 'secondPublicKey2',
 			};
 
-			stubs.modules.accounts.getAccounts = sinonSandbox
+			stubs.storage.entities.Account.get = sinonSandbox
 				.stub()
-				.callsFake((param1, param2, cb) => cb(null, [member1, member2]));
+				.resolves([member1, member2]);
 
 			self.getGroup(validAccount.address, (err, scopeGroup) => {
 				expect(err).to.not.exist;
-				expect(get('modules').accounts.getAccounts).to.be.calledWith({
-					address: ['address1', 'address2'],
+				expect(stubs.storage.entities.Account.get).to.be.calledWith({
+					address_in: ['address1', 'address2'],
 				});
 				expect(scopeGroup.members)
 					.to.be.an('array')

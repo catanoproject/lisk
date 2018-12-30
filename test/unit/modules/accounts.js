@@ -120,31 +120,6 @@ describe('accounts', () => {
 		});
 	});
 
-	describe('getAccounts', () => {
-		it('should get accounts for the filter provided', done => {
-			accounts.getAccounts({ secondSignature: 0 }, (err, res) => {
-				expect(err).to.not.exist;
-				expect(res).to.be.an('Array');
-				expect(res.filter(a => a.secondSignature !== false).length).to.equal(0);
-				done();
-			});
-		});
-
-		it('should internally call logic/account.getAll method', done => {
-			const getAllSpy = sinonSandbox.spy(accountLogic, 'getAll');
-
-			accounts.getAccounts({ address: validAccount.address }, (err, res) => {
-				expect(err).to.not.exist;
-				expect(res)
-					.to.be.an('Array')
-					.to.have.length(1);
-				expect(getAllSpy.withArgs({ address: validAccount.address })).to.be.ok;
-				getAllSpy.restore();
-				done();
-			});
-		});
-	});
-
 	describe('setAccountAndGet', () => {
 		it('should fail if address and publicKey is missing', done => {
 			const account = new accountFixtures.Account();

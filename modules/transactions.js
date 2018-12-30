@@ -57,6 +57,7 @@ class Transactions {
 		library = {
 			logger: scope.logger,
 			db: scope.db,
+			storage: scope.storage,
 			schema: scope.schema,
 			ed: scope.ed,
 			balancesSequence: scope.balancesSequence,
@@ -75,7 +76,8 @@ class Transactions {
 			scope.bus,
 			scope.logger,
 			scope.balancesSequence,
-			scope.config
+			scope.config,
+			scope.storage
 		);
 
 		__private.assetTypes[

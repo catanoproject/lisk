@@ -116,19 +116,6 @@ Accounts.prototype.getAccount = function(filter, fields, cb, tx) {
 };
 
 /**
- * Gets accounts information, calls logic.account.getAll().
- *
- * @param {Object} filter
- * @param {Object} fields
- * @param {function} cb - Callback function
- * @param {Object} tx - Database transaction/task object
- * @todo Add description for the params
- */
-Accounts.prototype.getAccounts = function(filter, fields, cb, tx) {
-	library.logic.account.getAll(filter, fields, cb, tx);
-};
-
-/**
  * Validates input address and calls logic.account.set() and logic.account.get().
  *
  * @param {Object} data - Contains address or public key to generate address
